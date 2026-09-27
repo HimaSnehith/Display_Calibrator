@@ -11,50 +11,51 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # Create Main Form
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "DisplayTune - AMD Custom Color Controller"
+$form.Text = "DisplayTune - Display Color Controller"
 $form.Size = New-Object System.Drawing.Size(980, 720)
 $form.MinimumSize = New-Object System.Drawing.Size(900, 620)
 $form.StartPosition = "CenterScreen"
-$form.BackColor = [System.Drawing.Color]::FromArgb(21, 23, 28)
-$form.ForeColor = [System.Drawing.Color]::FromArgb(240, 240, 240)
+$form.BackColor = [System.Drawing.Color]::FromArgb(15, 17, 23)
+$form.ForeColor = [System.Drawing.Color]::FromArgb(240, 240, 245)
 $form.Font = New-Object System.Drawing.Font("Segoe UI", 9.5)
 $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::Sizable
 $form.MaximizeBox = $true
 
-# Header Bar (AMD Style)
+# Header Bar (Sleek AMD Style)
 $headerPanel = New-Object System.Windows.Forms.Panel
 $headerPanel.Location = New-Object System.Drawing.Point(16, 12)
-$headerPanel.Size = New-Object System.Drawing.Size(932, 60)
+$headerPanel.Size = New-Object System.Drawing.Size(932, 62)
 $headerPanel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
-$headerPanel.BackColor = [System.Drawing.Color]::FromArgb(28, 31, 38)
+$headerPanel.BackColor = [System.Drawing.Color]::FromArgb(22, 25, 34)
 $headerPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
 $form.Controls.Add($headerPanel)
 
 $info = Get-DisplayHardwareInfo
 $lblHeader = New-Object System.Windows.Forms.Label
-$lblHeader.Text = ("Custom Color Controls | Display: " + $info.PanelModel + " (" + $info.Resolution + " @ " + $info.RefreshRate + ")")
+$lblHeader.Text = ("Custom Color Controls | " + $info.PanelModel + " (" + $info.Resolution + " @ " + $info.RefreshRate + ")")
 $lblHeader.Font = New-Object System.Drawing.Font("Segoe UI", 11, [System.Drawing.FontStyle]::Bold)
-$lblHeader.ForeColor = [System.Drawing.Color]::FromArgb(235, 60, 60)
-$lblHeader.Location = New-Object System.Drawing.Point(15, 8)
+$lblHeader.ForeColor = [System.Drawing.Color]::FromArgb(245, 75, 75)
+$lblHeader.Location = New-Object System.Drawing.Point(15, 9)
 $lblHeader.AutoSize = $true
 $headerPanel.Controls.Add($lblHeader)
 
 $lblSub = New-Object System.Windows.Forms.Label
-$lblSub.Text = "Modify the display's color reproduction in real-time (AMD Direct Hardware Pipeline)"
-$lblSub.ForeColor = [System.Drawing.Color]::FromArgb(160, 165, 180)
-$lblSub.Location = New-Object System.Drawing.Point(15, 32)
+$lblSub.Text = "Direct Hardware LUT Pipeline | Type value or drag slider | Double-click label to reset single item"
+$lblSub.ForeColor = [System.Drawing.Color]::FromArgb(155, 165, 185)
+$lblSub.Location = New-Object System.Drawing.Point(15, 33)
 $lblSub.AutoSize = $true
 $headerPanel.Controls.Add($lblSub)
 
 # Reset Button in Header (Top Right)
 $btnResetTop = New-Object System.Windows.Forms.Button
 $btnResetTop.Text = "Reset to Default"
-$btnResetTop.Location = New-Object System.Drawing.Point(780, 12)
-$btnResetTop.Size = New-Object System.Drawing.Size(135, 34)
+$btnResetTop.Location = New-Object System.Drawing.Point(775, 13)
+$btnResetTop.Size = New-Object System.Drawing.Size(140, 34)
 $btnResetTop.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Right
-$btnResetTop.BackColor = [System.Drawing.Color]::FromArgb(45, 48, 58)
+$btnResetTop.BackColor = [System.Drawing.Color]::FromArgb(40, 44, 56)
 $btnResetTop.ForeColor = [System.Drawing.Color]::White
 $btnResetTop.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+$btnResetTop.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(60, 66, 82)
 $btnResetTop.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
 $btnResetTop.Cursor = [System.Windows.Forms.Cursors]::Hand
 $btnResetTop.Add_Click({ Reset-AllToDefaults })
@@ -98,54 +99,106 @@ function Add-AmdSlider {
     $rowPanel.Location = New-Object System.Drawing.Point(10, $global:CurrentY)
     $rowPanel.Size = New-Object System.Drawing.Size(565, 54)
     $rowPanel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
-    $rowPanel.BackColor = [System.Drawing.Color]::FromArgb(26, 28, 35)
+    $rowPanel.BackColor = [System.Drawing.Color]::FromArgb(22, 25, 34)
     $rowPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
     $Parent.Controls.Add($rowPanel)
 
-    # Label on Left
+    # Label on Left (Double-click resets to default)
     $lbl = New-Object System.Windows.Forms.Label
     $lbl.Text = $Label
     $lbl.Font = New-Object System.Drawing.Font("Segoe UI", 9.5, [System.Drawing.FontStyle]::Bold)
     $lbl.Location = New-Object System.Drawing.Point(12, 16)
     $lbl.Size = New-Object System.Drawing.Size(160, 22)
     $lbl.ForeColor = [System.Drawing.Color]::FromArgb(235, 240, 250)
+    $lbl.Cursor = [System.Windows.Forms.Cursors]::Hand
     $rowPanel.Controls.Add($lbl)
 
-    # Value Box in Middle
+    # Value Box in Middle (Editable: on Enter or Blur updates)
     $txtVal = New-Object System.Windows.Forms.TextBox
     $txtVal.Text = ($Default.ToString($Format) + $Unit)
     $txtVal.Font = New-Object System.Drawing.Font("Segoe UI", 9.5, [System.Drawing.FontStyle]::Bold)
     $txtVal.TextAlign = [System.Windows.Forms.HorizontalAlignment]::Center
-    $txtVal.Location = New-Object System.Drawing.Point(180, 14)
-    $txtVal.Size = New-Object System.Drawing.Size(75, 24)
-    $txtVal.BackColor = [System.Drawing.Color]::FromArgb(18, 20, 24)
-    $txtVal.ForeColor = [System.Drawing.Color]::FromArgb(240, 240, 240)
-    $txtVal.ReadOnly = $true
+    $txtVal.Location = New-Object System.Drawing.Point(178, 14)
+    $txtVal.Size = New-Object System.Drawing.Size(80, 24)
+    $txtVal.BackColor = [System.Drawing.Color]::FromArgb(14, 16, 22)
+    $txtVal.ForeColor = [System.Drawing.Color]::FromArgb(240, 245, 255)
+    $txtVal.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
     $rowPanel.Controls.Add($txtVal)
 
     # Trackbar on Right
     $trk = New-Object System.Windows.Forms.TrackBar
-    $trk.Location = New-Object System.Drawing.Point(265, 12)
-    $trk.Size = New-Object System.Drawing.Size(285, 30)
+    $trk.Location = New-Object System.Drawing.Point(268, 12)
+    $trk.Size = New-Object System.Drawing.Size(282, 30)
     $trk.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
     $trk.Minimum = [int]($Min * $Scale)
     $trk.Maximum = [int]($Max * $Scale)
     $trk.Value = [int]($Default * $Scale)
     $trk.TickStyle = [System.Windows.Forms.TickStyle]::None
-    $trk.BackColor = [System.Drawing.Color]::FromArgb(26, 28, 35)
+    $trk.BackColor = [System.Drawing.Color]::FromArgb(22, 25, 34)
 
-    $trk.Tag = @{
+    $meta = @{
         TextBox = $txtVal
+        TrackBar = $trk
         Scale   = $Scale
         Unit    = $Unit
         Format  = $Format
         Name    = $Name
+        Min     = $Min
+        Max     = $Max
+        Default = $Default
+        Panel   = $rowPanel
+    }
+    $trk.Tag = $meta
+    $txtVal.Tag = $meta
+    $lbl.Tag = $meta
+
+    # Trackbar scroll handler
+    $trk.Add_Scroll({
+        $m = $this.Tag
+        $val = [double]$this.Value / [double]$m.Scale
+        $m.TextBox.Text = ($val.ToString($m.Format) + $m.Unit)
+        Update-FromAmdSliders
+    })
+
+    # Direct Textbox parse and commit logic
+    $commitText = {
+        param($m)
+        $raw = $m.TextBox.Text -replace '[^\d\.\-]', ''
+        $parsed = 0.0
+        if ([double]::TryParse($raw, [ref]$parsed)) {
+            $parsed = [Math]::Max($m.Min, [Math]::Min($m.Max, $parsed))
+            $m.TrackBar.Value = [int][Math]::Round($parsed * $m.Scale)
+            $m.TextBox.Text = ($parsed.ToString($m.Format) + $m.Unit)
+            Update-FromAmdSliders
+        } else {
+            $current = [double]$m.TrackBar.Value / $m.Scale
+            $m.TextBox.Text = ($current.ToString($m.Format) + $m.Unit)
+        }
     }
 
-    $trk.Add_Scroll({
-        $meta = $this.Tag
-        $val = [double]$this.Value / [double]$meta.Scale
-        $meta.TextBox.Text = ($val.ToString($meta.Format) + $meta.Unit)
+    $txtVal.Add_Enter({
+        $this.SelectAll()
+    })
+
+    $txtVal.Add_Leave({
+        $m = $this.Tag
+        & $commitText $m
+    })
+
+    $txtVal.Add_KeyDown({
+        if ($_.KeyCode -eq [System.Windows.Forms.Keys]::Enter) {
+            $_.SuppressKeyPress = $true
+            $m = $this.Tag
+            & $commitText $m
+            $m.Panel.Focus()
+        }
+    })
+
+    # Double click label resets that single slider to default
+    $lbl.Add_DoubleClick({
+        $m = $this.Tag
+        $m.TrackBar.Value = [int]($m.Default * $m.Scale)
+        $m.TextBox.Text = ($m.Default.ToString($m.Format) + $m.Unit)
         Update-FromAmdSliders
     })
 
@@ -158,6 +211,8 @@ function Add-AmdSlider {
         Unit     = $Unit
         Format   = $Format
         Default  = $Default
+        Min      = $Min
+        Max      = $Max
     }
 
     $global:CurrentY += 60
@@ -165,9 +220,9 @@ function Add-AmdSlider {
 
 # --- SECTION 1: THE CORE 4 CONTROLS ---
 $lblCoreHeader = New-Object System.Windows.Forms.Label
-$lblCoreHeader.Text = "MAIN DISPLAY CONTROLS"
+$lblCoreHeader.Text = "PRIMARY DISPLAY CONTROLS"
 $lblCoreHeader.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
-$lblCoreHeader.ForeColor = [System.Drawing.Color]::FromArgb(130, 140, 160)
+$lblCoreHeader.ForeColor = [System.Drawing.Color]::FromArgb(140, 150, 175)
 $lblCoreHeader.Location = New-Object System.Drawing.Point(10, $global:CurrentY)
 $lblCoreHeader.Size = New-Object System.Drawing.Size(300, 18)
 $panelScroll.Controls.Add($lblCoreHeader)
@@ -182,9 +237,9 @@ $global:CurrentY += 10
 
 # --- SECTION 2: ADVANCED CONTROLS (COLLAPSIBLE / ACCESSIBLE) ---
 $lblAdvHeader = New-Object System.Windows.Forms.Label
-$lblAdvHeader.Text = "ADVANCED FINE-TUNING"
+$lblAdvHeader.Text = "ADVANCED PRECISION TUNING"
 $lblAdvHeader.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
-$lblAdvHeader.ForeColor = [System.Drawing.Color]::FromArgb(130, 140, 160)
+$lblAdvHeader.ForeColor = [System.Drawing.Color]::FromArgb(140, 150, 175)
 $lblAdvHeader.Location = New-Object System.Drawing.Point(10, $global:CurrentY)
 $lblAdvHeader.Size = New-Object System.Drawing.Size(300, 18)
 $panelScroll.Controls.Add($lblAdvHeader)
@@ -328,6 +383,7 @@ $btnStartup.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Wi
 $btnStartup.BackColor = [System.Drawing.Color]::FromArgb(35, 125, 60)
 $btnStartup.ForeColor = [System.Drawing.Color]::White
 $btnStartup.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+$btnStartup.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(45, 150, 75)
 $btnStartup.Font = New-Object System.Drawing.Font("Segoe UI", 9.5, [System.Drawing.FontStyle]::Bold)
 $btnStartup.Cursor = [System.Windows.Forms.Cursors]::Hand
 $btnStartup.Add_Click({

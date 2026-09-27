@@ -16,6 +16,7 @@ param(
     [double]$GreenGain = 0,
     [double]$BlueGain = 0,
 
+    [string]$PresetName = "creator",
     [switch]$InstallStartup,
     [switch]$RemoveStartup
 )
@@ -26,8 +27,8 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 function Show-Header {
     Write-Host ""
     Write-Host " =================================================================" -ForegroundColor Cyan
-    Write-Host "   DISPLAYTUNE - AMD Custom Color Display Controller" -ForegroundColor White
-    Write-Host "   Pure Hardware Color Pipeline (Zero Latency / Zero Preset Clutter)" -ForegroundColor Gray
+    Write-Host "   DISPLAYTUNE - Direct Hardware Display Color Controller" -ForegroundColor White
+    Write-Host "   Pure Hardware GDI Pipeline (Zero Latency / Studio Reference Presets)" -ForegroundColor Gray
     Write-Host " =================================================================" -ForegroundColor Cyan
     Write-Host ""
 }
@@ -35,12 +36,14 @@ function Show-Header {
 function Show-Help {
     Show-Header
     Write-Host "USAGE:" -ForegroundColor Yellow
-    Write-Host "  .\display-tune.ps1 gui                                    - Launch AMD Custom Color UI"
-    Write-Host "  .\display-tune.ps1 inspect                                - Analyze panel model & current gamut"
+    Write-Host "  .\display-tune.ps1 gui                                    - Launch GUI Controller"
+    Write-Host "  .\display-tune.ps1 inspect                                - Analyze panel model & active GPU"
+    Write-Host "  .\display-tune.ps1 preset -PresetName [name]              - Apply studio preset (srgb, creator, macbook, cinema, night)"
     Write-Host "  .\display-tune.ps1 set [options]                          - Apply exact custom color parameters:"
-    Write-Host "      -ColorTemp 6500 -Brightness 0 -Contrast 100 -Saturation 125 -Gamma 2.20 -Hue 0"
-    Write-Host "  .\display-tune.ps1 reset                                  - Reset all parameters to 100% default"
-    Write-Host "  .\display-tune.ps1 startup                                - Make current profile run at Windows logon"
+    Write-Host "      -ColorTemp 6400 -Brightness 0 -Contrast 110 -Saturation 130 -Gamma 2.28"
+    Write-Host "  .\display-tune.ps1 apply                                  - Apply last saved profile.json"
+    Write-Host "  .\display-tune.ps1 reset                                  - Reset all display parameters to default"
+    Write-Host "  .\display-tune.ps1 startup                                - Run saved profile at Windows logon"
     Write-Host ""
 }
 
@@ -90,6 +93,27 @@ switch ($Command.ToLower()) {
             }
         } else {
             Write-Host "No saved profile found in profile.json. Use GUI or 'set' first." -ForegroundColor Yellow
+        }
+    }
+
+    "preset" {
+        $presets = @{
+            "srgb"    = @{ ColorTemp = 6500; Brightness = 0;  Contrast = 100; Saturation = 100; Gamma = 2.20; Hue = 0; RedGain = 0; GreenGain = 0; BlueGain = 0 }
+            "creator" = @{ ColorTemp = 6350; Brightness = 0;  Contrast = 108; Saturation = 128; Gamma = 2.26; Hue = 0; RedGain = 3; GreenGain = 1; BlueGain = -4 }
+            "macbook" = @{ ColorTemp = 6400; Brightness = -1; Contrast = 110; Saturation = 122; Gamma = 2.28; Hue = 0; RedGain = 2; GreenGain = 0; BlueGain = -3 }
+            "cinema"  = @{ ColorTemp = 6300; Brightness = 0;  Contrast = 106; Saturation = 118; Gamma = 2.25; Hue = 0; RedGain = 2; GreenGain = 1; BlueGain = -3 }
+            "night"   = @{ ColorTemp = 5200; Brightness = -3; Contrast = 96;  Saturation = 95;  Gamma = 2.15; Hue = 0; RedGain = 2; GreenGain = 2; BlueGain = -12 }
+        }
+        $target = if ($PSBoundParameters.ContainsKey("PresetName")) { $PresetName.ToLower() } else { "creator" }
+        if ($presets.ContainsKey($target)) {
+            $p = $presets[$target]
+            Save-DisplayProfile $p
+            $res = [DisplayGdi]::ApplyRampDirect($p.ColorTemp, $p.Brightness, $p.Contrast, $p.Saturation, $p.Gamma, $p.Hue, $p.RedGain, $p.GreenGain, $p.BlueGain)
+            if ($res) {
+                Write-Host "Applied Studio Preset: $target" -ForegroundColor Green
+            }
+        } else {
+            Write-Host "Unknown preset. Available: srgb, creator, macbook, cinema, night" -ForegroundColor Yellow
         }
     }
 

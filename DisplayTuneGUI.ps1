@@ -1,6 +1,6 @@
 # ==============================================================================
-# DisplayTune GUI - AMD Radeon Style Custom Color Controller
-# Clean, fluid, intuitive controls for any display with zero preset clutter
+# DisplayTune GUI - Studio Display Color Controller
+# Direct Hardware GDI Pipeline with Studio Reference Presets
 # ==============================================================================
 
 Add-Type -AssemblyName System.Windows.Forms
@@ -11,9 +11,9 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # Create Main Form
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "DisplayTune - Display Color Controller"
-$form.Size = New-Object System.Drawing.Size(980, 720)
-$form.MinimumSize = New-Object System.Drawing.Size(900, 620)
+$form.Text = "DisplayTune - Studio Display Color Controller"
+$form.Size = New-Object System.Drawing.Size(1000, 760)
+$form.MinimumSize = New-Object System.Drawing.Size(920, 660)
 $form.StartPosition = "CenterScreen"
 $form.BackColor = [System.Drawing.Color]::FromArgb(15, 17, 23)
 $form.ForeColor = [System.Drawing.Color]::FromArgb(240, 240, 245)
@@ -21,10 +21,10 @@ $form.Font = New-Object System.Drawing.Font("Segoe UI", 9.5)
 $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::Sizable
 $form.MaximizeBox = $true
 
-# Header Bar (Sleek AMD Style)
+# Header Bar
 $headerPanel = New-Object System.Windows.Forms.Panel
 $headerPanel.Location = New-Object System.Drawing.Point(16, 12)
-$headerPanel.Size = New-Object System.Drawing.Size(932, 62)
+$headerPanel.Size = New-Object System.Drawing.Size(952, 60)
 $headerPanel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
 $headerPanel.BackColor = [System.Drawing.Color]::FromArgb(22, 25, 34)
 $headerPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
@@ -40,16 +40,16 @@ $lblHeader.AutoSize = $true
 $headerPanel.Controls.Add($lblHeader)
 
 $lblSub = New-Object System.Windows.Forms.Label
-$lblSub.Text = "Direct Hardware LUT Pipeline | Type value or drag slider | Double-click label to reset single item"
+$lblSub.Text = "Direct Hardware LUT Pipeline | Type value or drag slider | Double-click label to reset item"
 $lblSub.ForeColor = [System.Drawing.Color]::FromArgb(155, 165, 185)
-$lblSub.Location = New-Object System.Drawing.Point(15, 33)
+$lblSub.Location = New-Object System.Drawing.Point(15, 32)
 $lblSub.AutoSize = $true
 $headerPanel.Controls.Add($lblSub)
 
 # Reset Button in Header (Top Right)
 $btnResetTop = New-Object System.Windows.Forms.Button
 $btnResetTop.Text = "Reset to Default"
-$btnResetTop.Location = New-Object System.Drawing.Point(775, 13)
+$btnResetTop.Location = New-Object System.Drawing.Point(795, 13)
 $btnResetTop.Size = New-Object System.Drawing.Size(140, 34)
 $btnResetTop.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Right
 $btnResetTop.BackColor = [System.Drawing.Color]::FromArgb(40, 44, 56)
@@ -61,10 +61,27 @@ $btnResetTop.Cursor = [System.Windows.Forms.Cursors]::Hand
 $btnResetTop.Add_Click({ Reset-AllToDefaults })
 $headerPanel.Controls.Add($btnResetTop)
 
+# Preset Bar (Quick Studio Reference Switchers)
+$presetPanel = New-Object System.Windows.Forms.Panel
+$presetPanel.Location = New-Object System.Drawing.Point(16, 78)
+$presetPanel.Size = New-Object System.Drawing.Size(952, 44)
+$presetPanel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
+$presetPanel.BackColor = [System.Drawing.Color]::FromArgb(18, 20, 28)
+$presetPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
+$form.Controls.Add($presetPanel)
+
+$lblPresetTitle = New-Object System.Windows.Forms.Label
+$lblPresetTitle.Text = "Studio Presets:"
+$lblPresetTitle.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
+$lblPresetTitle.ForeColor = [System.Drawing.Color]::FromArgb(160, 170, 195)
+$lblPresetTitle.Location = New-Object System.Drawing.Point(12, 12)
+$lblPresetTitle.AutoSize = $true
+$presetPanel.Controls.Add($lblPresetTitle)
+
 # Left Column: Sliders Container (Scrollable)
 $panelScroll = New-Object System.Windows.Forms.Panel
-$panelScroll.Location = New-Object System.Drawing.Point(16, 85)
-$panelScroll.Size = New-Object System.Drawing.Size(610, 575)
+$panelScroll.Location = New-Object System.Drawing.Point(16, 130)
+$panelScroll.Size = New-Object System.Drawing.Size(630, 570)
 $panelScroll.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
 $panelScroll.AutoScroll = $true
 $form.Controls.Add($panelScroll)
@@ -72,8 +89,8 @@ $form.Controls.Add($panelScroll)
 # Right Column: Live Pattern Box
 $grpPreview = New-Object System.Windows.Forms.GroupBox
 $grpPreview.Text = " Live Calibration Pattern "
-$grpPreview.Location = New-Object System.Drawing.Point(640, 85)
-$grpPreview.Size = New-Object System.Drawing.Size(308, 575)
+$grpPreview.Location = New-Object System.Drawing.Point(660, 130)
+$grpPreview.Size = New-Object System.Drawing.Size(308, 570)
 $grpPreview.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Right
 $grpPreview.ForeColor = [System.Drawing.Color]::FromArgb(200, 210, 230)
 $form.Controls.Add($grpPreview)
@@ -113,7 +130,7 @@ function Add-AmdSlider {
 
     $rowPanel = New-Object System.Windows.Forms.Panel
     $rowPanel.Location = New-Object System.Drawing.Point(10, $global:CurrentY)
-    $rowPanel.Size = New-Object System.Drawing.Size(565, 54)
+    $rowPanel.Size = New-Object System.Drawing.Size(585, 54)
     $rowPanel.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
     $rowPanel.BackColor = [System.Drawing.Color]::FromArgb(22, 25, 34)
     $rowPanel.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
@@ -124,7 +141,7 @@ function Add-AmdSlider {
     $lbl.Text = $Label
     $lbl.Font = New-Object System.Drawing.Font("Segoe UI", 9.5, [System.Drawing.FontStyle]::Bold)
     $lbl.Location = New-Object System.Drawing.Point(12, 16)
-    $lbl.Size = New-Object System.Drawing.Size(160, 22)
+    $lbl.Size = New-Object System.Drawing.Size(165, 22)
     $lbl.ForeColor = [System.Drawing.Color]::FromArgb(235, 240, 250)
     $lbl.Cursor = [System.Windows.Forms.Cursors]::Hand
     $rowPanel.Controls.Add($lbl)
@@ -134,7 +151,7 @@ function Add-AmdSlider {
     $txtVal.Text = ($Default.ToString($Format) + $Unit)
     $txtVal.Font = New-Object System.Drawing.Font("Segoe UI", 9.5, [System.Drawing.FontStyle]::Bold)
     $txtVal.TextAlign = [System.Windows.Forms.HorizontalAlignment]::Center
-    $txtVal.Location = New-Object System.Drawing.Point(178, 14)
+    $txtVal.Location = New-Object System.Drawing.Point(182, 14)
     $txtVal.Size = New-Object System.Drawing.Size(80, 24)
     $txtVal.BackColor = [System.Drawing.Color]::FromArgb(14, 16, 22)
     $txtVal.ForeColor = [System.Drawing.Color]::FromArgb(240, 245, 255)
@@ -143,8 +160,8 @@ function Add-AmdSlider {
 
     # Trackbar on Right
     $trk = New-Object System.Windows.Forms.TrackBar
-    $trk.Location = New-Object System.Drawing.Point(268, 12)
-    $trk.Size = New-Object System.Drawing.Size(282, 30)
+    $trk.Location = New-Object System.Drawing.Point(272, 12)
+    $trk.Size = New-Object System.Drawing.Size(298, 30)
     $trk.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
     $trk.Minimum = [int]($Min * $Scale)
     $trk.Maximum = [int]($Max * $Scale)
@@ -233,7 +250,7 @@ Add-AmdSlider -Parent $panelScroll -Name "Saturation" -Label "Saturation"       
 
 $global:CurrentY += 10
 
-# --- SECTION 2: ADVANCED CONTROLS (COLLAPSIBLE / ACCESSIBLE) ---
+# --- SECTION 2: ADVANCED CONTROLS ---
 $lblAdvHeader = New-Object System.Windows.Forms.Label
 $lblAdvHeader.Text = "ADVANCED PRECISION TUNING"
 $lblAdvHeader.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Bold)
@@ -292,17 +309,81 @@ function Reset-AllToDefaults {
     Update-FromAmdSliders
 }
 
+# Studio Presets Dictionary
+$global:StudioPresets = @{
+    "sRGB" = @{
+        ColorTemp = 6500; Brightness = 0; Contrast = 100; Saturation = 100; Gamma = 2.20; Hue = 0; RedGain = 0; GreenGain = 0; BlueGain = 0
+    }
+    "Creator" = @{
+        ColorTemp = 6350; Brightness = 0; Contrast = 108; Saturation = 128; Gamma = 2.26; Hue = 0; RedGain = 3; GreenGain = 1; BlueGain = -4
+    }
+    "MacBook" = @{
+        ColorTemp = 6400; Brightness = -1; Contrast = 110; Saturation = 122; Gamma = 2.28; Hue = 0; RedGain = 2; GreenGain = 0; BlueGain = -3
+    }
+    "Cinema" = @{
+        ColorTemp = 6300; Brightness = 0; Contrast = 106; Saturation = 118; Gamma = 2.25; Hue = 0; RedGain = 2; GreenGain = 1; BlueGain = -3
+    }
+    "Night" = @{
+        ColorTemp = 5200; Brightness = -3; Contrast = 96; Saturation = 95; Gamma = 2.15; Hue = 0; RedGain = 2; GreenGain = 2; BlueGain = -12
+    }
+}
+
+function Apply-StudioPreset {
+    param([string]$Key)
+    if ($global:StudioPresets.ContainsKey($Key)) {
+        $p = $global:StudioPresets[$Key]
+        foreach ($prop in @("ColorTemp", "Brightness", "Contrast", "Saturation", "Gamma", "Hue", "RedGain", "GreenGain", "BlueGain")) {
+            if ($global:Sliders.ContainsKey($prop)) {
+                $s = $global:Sliders[$prop]
+                $val = [double]$p.$prop
+                $s.TrackBar.Value = [int]($val * $s.Scale)
+                $s.TextBox.Text = ($val.ToString($s.Format) + $s.Unit)
+            }
+        }
+        Update-FromAmdSliders
+    }
+}
+
+# Build Preset Buttons in Preset Strip
+$presetList = @(
+    @{ Key = "sRGB";    Text = "Studio sRGB Reference" },
+    @{ Key = "Creator"; Text = "Creator 45% NTSC" },
+    @{ Key = "MacBook"; Text = "MacBook Liquid P3" },
+    @{ Key = "Cinema";  Text = "Cinema DCI-P3" },
+    @{ Key = "Night";   Text = "Night D50 Reading" }
+)
+
+$btnX = 115
+foreach ($item in $presetList) {
+    $btn = New-Object System.Windows.Forms.Button
+    $btn.Text = $item.Text
+    $btn.Location = New-Object System.Drawing.Point($btnX, 7)
+    $btn.Size = New-Object System.Drawing.Size(155, 28)
+    $btn.BackColor = [System.Drawing.Color]::FromArgb(32, 36, 48)
+    $btn.ForeColor = [System.Drawing.Color]::FromArgb(230, 235, 245)
+    $btn.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+    $btn.FlatAppearance.BorderColor = [System.Drawing.Color]::FromArgb(55, 62, 78)
+    $btn.Font = New-Object System.Drawing.Font("Segoe UI", 8.5, [System.Drawing.FontStyle]::Bold)
+    $btn.Cursor = [System.Windows.Forms.Cursors]::Hand
+    $btn.Tag = $item.Key
+    $btn.Add_Click({
+        Apply-StudioPreset $this.Tag
+    })
+    $presetPanel.Controls.Add($btn)
+    $btnX += 162
+}
+
 # Reference Test Pattern Bitmap
 $pbPreview = New-Object System.Windows.Forms.PictureBox
 $pbPreview.Location = New-Object System.Drawing.Point(12, 25)
-$pbPreview.Size = New-Object System.Drawing.Size(282, 470)
+$pbPreview.Size = New-Object System.Drawing.Size(282, 465)
 $pbPreview.Anchor = [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
 $pbPreview.BackColor = [System.Drawing.Color]::Black
 $pbPreview.BorderStyle = [System.Windows.Forms.BorderStyle]::FixedSingle
 $pbPreview.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::StretchImage
 $grpPreview.Controls.Add($pbPreview)
 
-$bmp = New-Object System.Drawing.Bitmap(282, 470)
+$bmp = New-Object System.Drawing.Bitmap(282, 465)
 $g = [System.Drawing.Graphics]::FromImage($bmp)
 $g.Clear([System.Drawing.Color]::FromArgb(16, 16, 16))
 
@@ -375,8 +456,8 @@ $pbPreview.Image = $bmp
 # Startup Button in Right Column
 $btnStartup = New-Object System.Windows.Forms.Button
 $btnStartup.Text = "Save as Windows Startup Profile"
-$btnStartup.Location = New-Object System.Drawing.Point(12, 510)
-$btnStartup.Size = New-Object System.Drawing.Size(282, 45)
+$btnStartup.Location = New-Object System.Drawing.Point(12, 505)
+$btnStartup.Size = New-Object System.Drawing.Size(282, 48)
 $btnStartup.Anchor = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right
 $btnStartup.BackColor = [System.Drawing.Color]::FromArgb(35, 125, 60)
 $btnStartup.ForeColor = [System.Drawing.Color]::White

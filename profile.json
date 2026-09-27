@@ -1,11 +1,11 @@
 ﻿{
-    "Contrast":  102,
-    "BlueGain":  0,
-    "Brightness":  -2,
-    "ColorTemp":  6250,
+    "Contrast":  110,
+    "BlueGain":  -3,
+    "Brightness":  -1,
+    "ColorTemp":  6400,
     "GreenGain":  0,
-    "Saturation":  110,
-    "Gamma":  2.3,
-    "RedGain":  0,
+    "Saturation":  122,
+    "Gamma":  2.28,
+    "RedGain":  2,
     "Hue":  0
 }

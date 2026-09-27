@@ -471,15 +471,16 @@ $btnStartup.Add_Click({
 
     $taskName = "DisplayTuneAutoCalibration"
     $psExe = (Get-Process -Id $PID).Path
-    $cmdLine = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scriptDir\display-tune.ps1`" apply"
+    $cmdLine = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scriptDir\display-tune.ps1`" apply -Startup"
     
-    $action = New-ScheduledTaskAction -Execute $psExe -Argument $cmdLine
+    $action = New-ScheduledTaskAction -Execute $psExe -Argument $cmdLine -WorkingDirectory $scriptDir
     $trigger = New-ScheduledTaskTrigger -AtLogOn
+    $trigger.Delay = "PT3S"
     $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest
     $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
     
     Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
-    [System.Windows.Forms.MessageBox]::Show("Successfully saved current Custom Color profile to profile.json and set to run automatically at Windows Logon!", "DisplayTune", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+    [System.Windows.Forms.MessageBox]::Show("Successfully saved current Custom Color profile to profile.json and registered to run automatically at Windows Logon (with GPU driver startup override)!", "DisplayTune", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
 })
 $grpPreview.Controls.Add($btnStartup)
 

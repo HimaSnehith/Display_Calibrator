@@ -86,6 +86,10 @@ switch ($Command.ToLower()) {
         $p = Load-DisplayProfile
         if ($p) {
             $res = [DisplayGdi]::ApplyRampDirect($p.ColorTemp, $p.Brightness, $p.Contrast, $p.Saturation, $p.Gamma, $p.Hue, $p.RedGain, $p.GreenGain, $p.BlueGain)
+            if ($PSBoundParameters.ContainsKey("Startup") -or ($Host.UI.RawUI.WindowTitle -eq "")) {
+                Start-Sleep -Seconds 3
+                [DisplayGdi]::ApplyRampDirect($p.ColorTemp, $p.Brightness, $p.Contrast, $p.Saturation, $p.Gamma, $p.Hue, $p.RedGain, $p.GreenGain, $p.BlueGain) | Out-Null
+            }
             if ($res) {
                 Write-Host "Loaded and applied saved profile from profile.json!" -ForegroundColor Green
             } else {
@@ -126,15 +130,16 @@ switch ($Command.ToLower()) {
         }
         
         $psExe = (Get-Process -Id $PID).Path
-        $cmdLine = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scriptDir\display-tune.ps1`" apply"
+        $cmdLine = "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scriptDir\display-tune.ps1`" apply -Startup"
         
-        $action = New-ScheduledTaskAction -Execute $psExe -Argument $cmdLine
+        $action = New-ScheduledTaskAction -Execute $psExe -Argument $cmdLine -WorkingDirectory $scriptDir
         $trigger = New-ScheduledTaskTrigger -AtLogOn
+        $trigger.Delay = "PT3S"
         $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType Interactive -RunLevel Highest
         $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
         
         Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
-        Write-Host "Configured DisplayTune to automatically run current profile at Windows Logon!" -ForegroundColor Green
+        Write-Host "Configured DisplayTune to automatically run current profile at Windows Logon (with driver override protection)!" -ForegroundColor Green
     }
 
     Default {

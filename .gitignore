@@ -1,0 +1,6 @@
+# Temp files
+*.tmp
+*.log
+scratch/
+test_*.ps1
+debug_*.ps1

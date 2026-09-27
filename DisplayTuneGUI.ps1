@@ -82,6 +82,22 @@ $form.Controls.Add($grpPreview)
 $global:Sliders = @{}
 $global:CurrentY = 10
 
+function Commit-AmdSliderText {
+    param($m)
+    if (-not $m) { return }
+    $raw = $m.TextBox.Text -replace '[^\d\.\-]', ''
+    $parsed = 0.0
+    if ([double]::TryParse($raw, [ref]$parsed)) {
+        $parsed = [Math]::Max($m.Min, [Math]::Min($m.Max, $parsed))
+        $m.TrackBar.Value = [int][Math]::Round($parsed * $m.Scale)
+        $m.TextBox.Text = ($parsed.ToString($m.Format) + $m.Unit)
+        Update-FromAmdSliders
+    } else {
+        $current = [double]$m.TrackBar.Value / $m.Scale
+        $m.TextBox.Text = ($current.ToString($m.Format) + $m.Unit)
+    }
+}
+
 function Add-AmdSlider {
     param(
         [System.Windows.Forms.Control]$Parent,
@@ -160,37 +176,19 @@ function Add-AmdSlider {
         Update-FromAmdSliders
     })
 
-    # Direct Textbox parse and commit logic
-    $commitText = {
-        param($m)
-        $raw = $m.TextBox.Text -replace '[^\d\.\-]', ''
-        $parsed = 0.0
-        if ([double]::TryParse($raw, [ref]$parsed)) {
-            $parsed = [Math]::Max($m.Min, [Math]::Min($m.Max, $parsed))
-            $m.TrackBar.Value = [int][Math]::Round($parsed * $m.Scale)
-            $m.TextBox.Text = ($parsed.ToString($m.Format) + $m.Unit)
-            Update-FromAmdSliders
-        } else {
-            $current = [double]$m.TrackBar.Value / $m.Scale
-            $m.TextBox.Text = ($current.ToString($m.Format) + $m.Unit)
-        }
-    }
-
     $txtVal.Add_Enter({
         $this.SelectAll()
     })
 
     $txtVal.Add_Leave({
-        $m = $this.Tag
-        & $commitText $m
+        Commit-AmdSliderText $this.Tag
     })
 
     $txtVal.Add_KeyDown({
         if ($_.KeyCode -eq [System.Windows.Forms.Keys]::Enter) {
             $_.SuppressKeyPress = $true
-            $m = $this.Tag
-            & $commitText $m
-            $m.Panel.Focus()
+            Commit-AmdSliderText $this.Tag
+            if ($this.Tag.Panel) { $this.Tag.Panel.Focus() }
         }
     })
 

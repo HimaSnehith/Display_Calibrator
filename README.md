@@ -61,7 +61,29 @@ A low-latency, zero-overhead display color calibration and hardware look-up tabl
 
 ---
 
-## Usage
+## Standalone Executable
+
+`DisplayTune.exe` is a 28 KB self-contained portable native Windows binary. It requires no installation, has no external dependencies, and launches in under 50 milliseconds.
+
+```cmd
+:: Launch GUI
+DisplayTune.exe
+
+:: Apply saved profile silently
+DisplayTune.exe --apply
+
+:: Apply preset
+DisplayTune.exe --preset creator
+DisplayTune.exe --preset srgb
+DisplayTune.exe --preset macbook
+
+:: Reset display to default
+DisplayTune.exe --reset
+```
+
+---
+
+## Usage (PowerShell Scripts)
 
 ### Graphical Interface
 
@@ -108,6 +130,8 @@ Launch the interactive control panel:
 
 ```
 Display/
+├── DisplayTune.exe         # Standalone compiled portable binary (28 KB)
+├── DisplayTune.cs          # Native C# source code
 ├── DisplayEngine.ps1       # Low-level Win32 GDI wrapper and math engine
 ├── DisplayTuneGUI.ps1      # WinForms hardware controller interface
 ├── display-tune.ps1        # Unified CLI entry point

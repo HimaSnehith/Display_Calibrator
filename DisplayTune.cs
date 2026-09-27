@@ -681,8 +681,64 @@ namespace DisplayTune {
             ApplyAllSliders();
             try {
                 string exePath = Process.GetCurrentProcess().MainModule.FileName;
-                string args = string.Format("/Create /F /TN \"DisplayTuneAutoCalibration\" /TR \"\\\"{0}\\\" --apply --startup\" /SC ONLOGON /DELAY 0000:03 /RL HIGHEST", exePath);
+                string xmlContent = string.Format(@"<?xml version=""1.0"" encoding=""UTF-16""?>
+<Task version=""1.2"" xmlns=""http://schemas.microsoft.com/windows/2004/02/mit/task"">
+  <RegistrationInfo>
+    <Description>DisplayTune Hardware LUT Calibration Loader (Logon, Wake &amp; Unlock)</Description>
+  </RegistrationInfo>
+  <Triggers>
+    <LogonTrigger>
+      <Enabled>true</Enabled>
+      <Delay>PT3S</Delay>
+    </LogonTrigger>
+    <SessionStateChangeTrigger>
+      <Enabled>true</Enabled>
+      <StateChange>SessionUnlock</StateChange>
+      <Delay>PT1S</Delay>
+    </SessionStateChangeTrigger>
+    <EventTrigger>
+      <Enabled>true</Enabled>
+      <Subscription>&lt;QueryList&gt;&lt;Query Id=""0"" Path=""System""&gt;&lt;Select Path=""System""&gt;*[System[Provider[@Name='Microsoft-Windows-Power-Troubleshooter'] and EventID=1]]&lt;/Select&gt;&lt;Select Path=""System""&gt;*[System[Provider[@Name='Microsoft-Windows-Kernel-Power'] and EventID=107]]&lt;/Select&gt;&lt;/Query&gt;&lt;/QueryList&gt;</Subscription>
+      <Delay>PT2S</Delay>
+    </EventTrigger>
+  </Triggers>
+  <Principals>
+    <Principal id=""Author"">
+      <LogonType>InteractiveToken</LogonType>
+      <RunLevel>HighestAvailable</RunLevel>
+    </Principal>
+  </Principals>
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+    <IdleSettings>
+      <StopOnIdleEnd>false</StopOnIdleEnd>
+      <RestartOnIdle>false</RestartOnIdle>
+    </IdleSettings>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>true</Hidden>
+    <RunOnlyIfIdle>false</RunOnlyIfIdle>
+    <WakeToRun>false</WakeToRun>
+    <ExecutionTimeLimit>PT1H</ExecutionTimeLimit>
+    <Priority>7</Priority>
+  </Settings>
+  <Actions Context=""Author"">
+    <Exec>
+      <Command>{0}</Command>
+      <Arguments>--apply --startup</Arguments>
+    </Exec>
+  </Actions>
+</Task>", exePath);
 
+                string tempXml = Path.Combine(Path.GetTempPath(), "DisplayTuneTask.xml");
+                File.WriteAllText(tempXml, xmlContent, Encoding.Unicode);
+
+                string args = string.Format("/Create /F /TN \"DisplayTuneAutoCalibration\" /XML \"{0}\"", tempXml);
                 ProcessStartInfo psi = new ProcessStartInfo("schtasks.exe", args) {
                     CreateNoWindow = true,
                     UseShellExecute = false
@@ -690,10 +746,12 @@ namespace DisplayTune {
                 Process proc = Process.Start(psi);
                 if (proc != null) {
                     proc.WaitForExit();
-                    MessageBox.Show("Successfully saved calibration profile and registered DisplayTune to run automatically at Windows Logon (with driver override protection)!", "DisplayTune", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
+                try { File.Delete(tempXml); } catch { }
+
+                MessageBox.Show("Successfully saved calibration profile and registered DisplayTune to restore colors on Windows Logon, Wake from Sleep, and Screen Unlock!", "DisplayTune", MessageBoxButtons.OK, MessageBoxIcon.Information);
             } catch (Exception ex) {
-                MessageBox.Show("Failed to register logon task: " + ex.Message, "DisplayTune", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Failed to register automated task: " + ex.Message, "DisplayTune", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

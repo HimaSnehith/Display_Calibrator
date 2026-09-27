@@ -1,11 +1,11 @@
 ﻿{
-  "ColorTemp": 6400,
-  "Brightness": -2,
-  "Contrast": 108,
-  "Saturation": 120,
-  "Gamma": 2.30,
-  "Hue": 0,
-  "RedGain": 2,
-  "GreenGain": 0,
-  "BlueGain": -3
+    "Contrast":  108,
+    "BlueGain":  -3,
+    "Brightness":  -2,
+    "ColorTemp":  6400,
+    "GreenGain":  0,
+    "Saturation":  120,
+    "Gamma":  2.3,
+    "RedGain":  2,
+    "Hue":  0
 }

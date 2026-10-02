@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
+using Microsoft.Win32;
 
 namespace DisplayTune {
     // =========================================================================
@@ -136,6 +137,23 @@ namespace DisplayTune {
             }
 
             return ramp;
+        }
+
+        public static bool GetCurrentRamp(out RAMP ramp) {
+            ramp = new RAMP {
+                Red = new ushort[256],
+                Green = new ushort[256],
+                Blue = new ushort[256]
+            };
+            IntPtr hdc = GetDC(IntPtr.Zero);
+            IntPtr ptr = Marshal.AllocHGlobal(Marshal.SizeOf(ramp));
+            bool success = GetDeviceGammaRamp(hdc, ptr);
+            if (success) {
+                ramp = (RAMP)Marshal.PtrToStructure(ptr, typeof(RAMP));
+            }
+            Marshal.FreeHGlobal(ptr);
+            ReleaseDC(IntPtr.Zero, hdc);
+            return success;
         }
 
         public static bool ApplyRampDirect(double colorTemp, double brightness, double contrast, double saturation, double gamma, double hue, double redGain, double greenGain, double blueGain) {
@@ -828,16 +846,16 @@ namespace DisplayTune {
     }
 
     // =========================================================================
-    // Program Entry Point (Dual Mode: CLI / GUI)
+    // Program Entry Point (Dual Mode: CLI / GUI / Sentinel Watcher)
     // =========================================================================
     public static class Program {
+        private static Mutex watcherMutex = null;
+
         [STAThread]
         public static void Main(string[] args) {
             if (args.Length > 0) {
-                // CLI Execution Mode
                 RunCli(args);
             } else {
-                // GUI Mode
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
                 Application.Run(new MainForm());
@@ -848,12 +866,14 @@ namespace DisplayTune {
             bool isStartup = false;
             bool isApply = false;
             bool isReset = false;
+            bool isWatch = false;
             string preset = null;
 
             for (int i = 0; i < args.Length; i++) {
                 string a = args[i].ToLower();
                 if (a == "--apply" || a == "-apply" || a == "apply") isApply = true;
                 if (a == "--startup" || a == "-startup" || a == "startup") isStartup = true;
+                if (a == "--watch" || a == "-watch" || a == "watch") isWatch = true;
                 if (a == "--reset" || a == "-reset" || a == "reset") isReset = true;
                 if ((a == "--preset" || a == "-preset" || a == "preset") && i + 1 < args.Length) {
                     preset = args[i + 1].ToLower();
@@ -874,15 +894,145 @@ namespace DisplayTune {
                 return;
             }
 
+            if (isStartup || isWatch) {
+                RunStartupWatcher();
+                return;
+            }
+
             if (isApply) {
+                ApplyProfileFromDisk();
+            }
+        }
+
+        private static void ApplyProfileFromDisk() {
+            try {
                 DisplayProfile p = DisplayProfile.Load();
                 DisplayGdi.ApplyRampDirect(p.ColorTemp, p.Brightness, p.Contrast, p.Saturation, p.Gamma, p.Hue, p.RedGain, p.GreenGain, p.BlueGain);
+            } catch { }
+        }
 
-                if (isStartup) {
-                    Thread.Sleep(3000);
-                    DisplayGdi.ApplyRampDirect(p.ColorTemp, p.Brightness, p.Contrast, p.Saturation, p.Gamma, p.Hue, p.RedGain, p.GreenGain, p.BlueGain);
-                }
+        private static void TriggerDelayedRestore() {
+            ApplyProfileFromDisk();
+            Thread t = new Thread(delegate() {
+                Thread.Sleep(1500);
+                ApplyProfileFromDisk();
+                Thread.Sleep(2000);
+                ApplyProfileFromDisk();
+            });
+            t.IsBackground = true;
+            t.Start();
+        }
+
+        private static void RunStartupWatcher() {
+            bool createdNew;
+            watcherMutex = new Mutex(true, @"Local\DisplayTuneWatcherMutex", out createdNew);
+            if (!createdNew) {
+                ApplyProfileFromDisk();
+                return;
             }
+
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            Application.Run(new SentinelForm());
+        }
+    }
+
+    // =========================================================================
+    // Hardware LUT Self-Healing Sentinel & OS Event Watchdog
+    // =========================================================================
+    public class SentinelForm : Form {
+        private System.Windows.Forms.Timer watchdogTimer;
+        private IntPtr hPowerNotify1 = IntPtr.Zero;
+        private IntPtr hPowerNotify2 = IntPtr.Zero;
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr RegisterPowerSettingNotification(IntPtr hRecipient, ref Guid PowerSettingGuid, int Flags);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern IntPtr RegisterSuspendResumeNotification(IntPtr hRecipient, int Flags);
+
+        private static Guid GUID_CONSOLE_DISPLAY_STATE = new Guid("6fe69556-7040-40e4-ca6e-7b70f6d2e96a");
+        private static Guid GUID_SESSION_DISPLAY_STATUS = new Guid("2b84c20e-ad23-4ddf-93db-05ffbd7efca5");
+
+        public SentinelForm() {
+            this.FormBorderStyle = FormBorderStyle.None;
+            this.ShowInTaskbar = false;
+            this.WindowState = FormWindowState.Minimized;
+            this.Size = new Size(0, 0);
+            this.Opacity = 0;
+
+            // 1. Initial Apply
+            ApplyProfile();
+
+            // 2. Delayed pass for graphics driver initialization
+            Thread initThread = new Thread(delegate() {
+                Thread.Sleep(3000);
+                ApplyProfile();
+            });
+            initThread.IsBackground = true;
+            initThread.Start();
+
+            // 3. Hardware LUT Self-Healing Watchdog (2s Interval, 0.00% CPU)
+            watchdogTimer = new System.Windows.Forms.Timer();
+            watchdogTimer.Interval = 2000;
+            watchdogTimer.Tick += delegate(object sender, EventArgs e) {
+                CheckAndEnforceRamp();
+            };
+            watchdogTimer.Start();
+        }
+
+        protected override void OnHandleCreated(EventArgs e) {
+            base.OnHandleCreated(e);
+            try {
+                Guid g1 = GUID_CONSOLE_DISPLAY_STATE;
+                hPowerNotify1 = RegisterPowerSettingNotification(this.Handle, ref g1, 0);
+                Guid g2 = GUID_SESSION_DISPLAY_STATUS;
+                hPowerNotify2 = RegisterPowerSettingNotification(this.Handle, ref g2, 0);
+                RegisterSuspendResumeNotification(this.Handle, 0);
+            } catch { }
+        }
+
+        protected override void WndProc(ref Message m) {
+            const int WM_POWERBROADCAST = 0x0218;
+            const int WM_DISPLAYCHANGE = 0x007E;
+            const int WM_WTSSESSION_CHANGE = 0x02B1;
+
+            if (m.Msg == WM_POWERBROADCAST || m.Msg == WM_DISPLAYCHANGE || m.Msg == WM_WTSSESSION_CHANGE) {
+                ApplyProfile();
+                Thread t = new Thread(delegate() {
+                    Thread.Sleep(1000);
+                    ApplyProfile();
+                    Thread.Sleep(2500);
+                    ApplyProfile();
+                });
+                t.IsBackground = true;
+                t.Start();
+            }
+            base.WndProc(ref m);
+        }
+
+        private void CheckAndEnforceRamp() {
+            try {
+                DisplayProfile p = DisplayProfile.Load();
+                DisplayGdi.RAMP target = DisplayGdi.GenerateRamp(p.ColorTemp, p.Brightness, p.Contrast, p.Saturation, p.Gamma, p.Hue, p.RedGain, p.GreenGain, p.BlueGain);
+                DisplayGdi.RAMP current;
+                if (DisplayGdi.GetCurrentRamp(out current)) {
+                    // Check if GPU driver or Modern Standby reset the LUT to linear default
+                    int diffR = Math.Abs((int)current.Red[128] - (int)target.Red[128]);
+                    int diffB = Math.Abs((int)current.Blue[128] - (int)target.Blue[128]);
+                    if (diffR > 150 || diffB > 150) {
+                        // Hardware LUT drifted or was overwritten! Self-heal immediately.
+                        DisplayGdi.ApplyRampDirect(p.ColorTemp, p.Brightness, p.Contrast, p.Saturation, p.Gamma, p.Hue, p.RedGain, p.GreenGain, p.BlueGain);
+                    }
+                }
+            } catch { }
+        }
+
+        private void ApplyProfile() {
+            try {
+                DisplayProfile p = DisplayProfile.Load();
+                DisplayGdi.ApplyRampDirect(p.ColorTemp, p.Brightness, p.Contrast, p.Saturation, p.Gamma, p.Hue, p.RedGain, p.GreenGain, p.BlueGain);
+            } catch { }
         }
     }
 }
